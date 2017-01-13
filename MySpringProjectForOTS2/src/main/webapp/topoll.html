@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Poll</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link
+	href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css"
+	rel="stylesheet">
+<script src="http://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.0.js"></script>
+<script
+	src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<script src="http://ajax.aspnetcdn.com/ajax/knockout/knockout-2.2.1.js"></script>
+</head>
+<body>
+	<div class="navbar">
+		<div class="navbar-inner">
+			<a class="brand" href="#">MyPoll Application</a>
+		</div>
+	</div>
+	<div id="main" class="container">
+	
+	</div>
+	<!-- 		Vote -->
+<div id="vote" class="modal hide fade" tabindex="=1" role="dialog" aria-labelledby="voteDialogLabel" aria-hidden="true">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="voteDialogLabel">Vote</h3>
+    </div>
+    <div class="modal-body">
+        <form class="form-horizontal">
+            <div class="control-group">
+                <label  class="control-label" for="inputTask">Question</label>
+                <div class="controls">
+                	<strong data-bind="text: question"></strong>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="inputDescription"></label>
+                <div class="controls">
+                  
+                    <select multiple="multiple" height="5" data-bind="options:allItems, selectedOptions:selectedItems"> </select>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+<!--         <button data-bind="click: votePoll, enable: selectedItems().length > 0" class="btn btn-primary">Vote</button> -->
+        <button data-bind="click: votePoll" class="btn btn-primary">Vote</button>
+        <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+    </div>
+</div>
+	<script type="text/javascript">
+
+        // application code here!
+		 function VoteViewModel() {
+			 var search = window.location.search.substr(1),
+			    keys = {};
+				search.split('&').forEach(function(item) {
+			    item = item.split('=');
+			    keys[item[0]] = item[1];
+				});
+				
+				//------------------------------
+             var self = this;
+             self.poll = ko.observable();
+             self.question = ko.observable();
+             self.allItems = ko.observableArray();
+             self.selectedItems = ko.observable();
+             //------------------------------------
+             
+			self.ajax = function(uri, method, data) {
+          	  var request = {
+                url: uri,
+                type: method,
+                contentType: "application/json",
+                cache: true,
+                dataType: 'json',
+                data: JSON.stringify(data),
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("Authorization", 
+                        "Basic " + btoa(self.username + ":" + self.password));
+                },
+                error: function(jqXHR) {
+                    console.log("ajax error " + jqXHR.status);
+                }
+            };
+            return $.ajax(request);
+       		 }
+      		 //-----------------------------------
+     		 
+				self.ajax("poll/"+keys.poll, 'GET').done(function(poll) {
+			 	self.poll=poll;
+	            self.question(poll.question);
+	            var answers = [poll.votes[0].value,poll.votes[1].value,poll.votes[2].value];
+                self.allItems(answers);
+	            $('#vote').modal('show');
+	            });
+				//----------------------------------------
+				self.votePoll = function() {
+                 var select = self.selectedItems;
+                 $('#vote').modal('hide');
+                 var idVote = 0;
+                 var arr = [self.poll.votes[0],self.poll.votes[1],self.poll.votes[2]];
+                 arr.forEach(function(item,i,arr){
+                    if(item.value==self.selectedItems()[0]){
+                       idVote=item.id; } 
+                    });
+                 self.ajax('poll/vote/'+idVote, 'PUT', self.poll.id).done(function(res) {
+                 });
+             }
+		 }
+
+		 var voteViewModel = new VoteViewModel();
+		 ko.applyBindings(voteViewModel, $('#vote')[0]);
+		 
+     </script>
+</body>
+</html>
